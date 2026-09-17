@@ -58,6 +58,7 @@ export function boundaryLoops(cellIds: CellId[]): PositionId[][] {
 function createMove(id: string, cellIds: CellId[]): Move {
   return { id, cells: cellIds, cycle: boundaryLoops(cellIds)[0] }
 }
+export const squareMoves = Object.keys(cells).map(cell => createMove(cell, [cell]))
 export const moveB = createMove('B', ['B'])
 export const combinedMove = createMove('ADEH', ['A', 'D', 'E', 'H'])
 const groups = [['B', 'C'], ['D', 'E', 'F'], ['H', 'I', 'L']]
@@ -92,8 +93,8 @@ export function interpolate(from: Point, to: Point, progress: number): Point {
   return { x: from.x + (to.x - from.x) * progress, y: from.y + (to.y - from.y) * progress }
 }
 
-export function scramble(tokens: Token[], count = 24, random = Math.random): Token[] {
+export function scramble(tokens: Token[], count = 24, random = Math.random, availableMoves: Move[] = moves): Token[] {
   let result = tokens
-  for (let index = 0; index < count; index++) result = rotate(result, moves[Math.floor(random() * moves.length)].cycle)
+  for (let index = 0; index < count; index++) result = rotate(result, availableMoves[Math.floor(random() * availableMoves.length)].cycle)
   return result
 }

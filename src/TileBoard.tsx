@@ -1,18 +1,17 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { BOARD_WIDTH, BOARD_HEIGHT, TOKEN_COUNT, ORIGIN, cells, moves, positions } from './model'
 import type { Color, Move } from './model'
 import { CUTOUT_RADIUS, DOT_RADIUS, maskPositionsForSurface, tilePath, vertexSurfaces } from './geometry'
 import type { Puzzle } from './usePuzzle'
 
-const surfaces = moves.map(move => {
+function buildSurfaces(availableMoves: Move[]) { return availableMoves.map(move => {
   const centers = move.cells.map(cell => ({ x: (positions[cells[cell][0]].x + positions[cells[cell][2]].x) / 2, y: (positions[cells[cell][0]].y + positions[cells[cell][2]].y) / 2 }))
   const vertices = move.cells.flatMap(cell => cells[cell].map(position => positions[position]))
   const left = Math.min(...vertices.map(point => point.x))
   const top = Math.min(...vertices.map(point => point.y))
   const bounds = { x: left - 4, y: top - 4, width: Math.max(...vertices.map(point => point.x)) - left + 8, height: Math.max(...vertices.map(point => point.y)) - top + 12 }
-  return { ...move, bounds, path: tilePath(move.cells), maskPositions: maskPositionsForSurface(move, moves), center: { x: centers.reduce((sum, point) => sum + point.x, 0) / centers.length, y: centers.reduce((sum, point) => sum + point.y, 0) / centers.length } }
-})
-const touches = vertexSurfaces(moves)
+  return { ...move, bounds, path: tilePath(move.cells), maskPositions: maskPositionsForSurface(move, availableMoves), center: { x: centers.reduce((sum, point) => sum + point.x, 0) / centers.length, y: centers.reduce((sum, point) => sum + point.y, 0) / centers.length } }
+}) }
 export const BALL_COLORS: Record<Color, [string, string, string, string]> = {
   coral: ['#ff9998', '#ff6f6b', '#ed5759', '#b84046'],
   blue: ['#71c9ff', '#329df4', '#148cde', '#126ca5'],
@@ -28,7 +27,9 @@ export const BALL_FINISHES = [
   { tilt: -2, x: .2, y: .8, strength: 1 },
 ]
 
-export default function TileBoard({ puzzle }: { puzzle: Puzzle }) {
+export default function TileBoard({ puzzle, availableMoves = moves }: { puzzle: Puzzle; availableMoves?: Move[] }) {
+  const surfaces = useMemo(() => buildSurfaces(availableMoves), [availableMoves])
+  const touches = useMemo(() => vertexSurfaces(availableMoves), [availableMoves])
   const { tokens, active, debug, svgRef, play, beginPress, releasePress, cancelPress, locked } = puzzle
   const [hovered, setHovered] = useState<Move | null>(null)
   const inputOwner = useRef<number | string | null>(null)

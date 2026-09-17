@@ -14,6 +14,19 @@
   -moz-osx-font-smoothing: grayscale;
 }
 * { box-sizing: border-box; }
+#page-title:focus { outline: none; }
+.home-screen { display: flex; flex-direction: column; }
+.home-screen .site-header { width: 100%; flex-shrink: 0; }
+.home-screen main { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 24px 0; }
+.level-selection { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; margin-top: 30px; }
+.level-card { width: min(280px, 100%); padding: 28px; border: 1px solid #e4ded0; border-radius: 24px; background: linear-gradient(145deg, #fffdf7, #f1ece2); box-shadow: 0 5px 0 #e5ded0, 0 12px 25px #796a4b12; color: #515c49; display: flex; flex-direction: column; align-items: center; transition: transform 150ms ease, box-shadow 150ms ease; }
+.level-card:hover { transform: translateY(-2px); }
+.level-card:active { transform: translateY(3px); box-shadow: 0 2px 0 #e5ded0; }
+.level-title { font-family: Georgia, serif; font-size: 32px; }
+.level-description { font-size: 11px; color: #929184; margin-top: 8px; }
+.level-start { display: flex; gap: 32px; margin-top: 25px; font-size: 12px; font-weight: 600; }
+.back-button { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 7px 15px; border: 1px solid #dddcd0; border-radius: 30px; background: #faf9f3; color: #637153; font-size: 12px; }
+.back-button:hover:not(:disabled) { background: #edf0e6; }
 body { margin: 0; min-width: 320px; }
 button, input { font: inherit; }
 button, a, input { -webkit-tap-highlight-color: transparent; }
@@ -97,4 +110,21 @@ h1 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size
 }
 @media (prefers-reduced-motion: reduce) {
   .tile.molded .surface-face, .control-button, .switch, .switch::after { transition-duration: 0ms; }
+}
+
+@media (min-width: 700px) {
+  .app-shell {
+    --board-width: clamp(240px, calc((100vh - 260px) * .796875), 550px);
+    --board-width: clamp(240px, calc((100svh - 260px) * .796875), 550px);
+  }
+  .site-header { height: 56px; }
+  .introduction { padding-top: 4px; }
+  .eyebrow { line-height: 12px; margin-bottom: 8px; }
+  h1 { font-size: clamp(30px, 3vw, 38px); line-height: 1.15; }
+  .subtitle { line-height: 16px; margin-top: 8px; }
+  .playground { margin-top: 12px; }
+  .board-meta { line-height: 14px; }
+  .site-footer { padding: 12px 0; }
+  .site-footer p { line-height: 12px; margin: 8px 0; }
+  .version { display: block; line-height: 10px; }
 }

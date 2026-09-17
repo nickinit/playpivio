@@ -114,9 +114,9 @@ export function usePuzzle() {
     setFrameTime(null)
     setMessage('A fresh start. There’s no wrong first move.')
   }
-  function mix() {
+  function mix(availableMoves?: Move[]) {
     if (locked.current) return
-    setTokens(scramble(tokenState.current))
+    setTokens(scramble(createTokens(), 24, Math.random, availableMoves))
     setMoveCount(0)
     setFrameTime(null)
     setMessage('All mixed up. Make a little movement.')
