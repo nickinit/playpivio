@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createTokens, rotate, scramble } from './model'
-import type { Move, Point } from './model'
+import type { Move, Point, Token } from './model'
 import { perimeterRoute, pointAlongRoute } from './geometry'
-import { createRotationTiming } from './rotationTiming'
+import { createRotationTiming, REVERSE_HOLD_MS } from './rotationTiming'
 
-export function usePuzzle() {
-  const [tokens, setTokens] = useState(createTokens)
+export function usePuzzle(initialTokens: () => Token[] = createTokens, canPlay?: (move: Move, tokens: Token[]) => boolean, allowReverse = true) {
+  const [tokens, setTokens] = useState(initialTokens)
   const [active, setActive] = useState<Move | null>(null)
+  const [counterclockwise, setCounterclockwise] = useState(false)
   const [moveCount, setMoveCount] = useState(0)
   const [speed, setSpeed] = useState(1)
   const [debug, setDebug] = useState(false)
@@ -15,6 +16,7 @@ export function usePuzzle() {
   const svgRef = useRef<SVGSVGElement>(null)
   const locked = useRef(false)
   const animationFrame = useRef(0)
+  const reverseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tokenState = useRef(tokens)
   const pendingFinish = useRef(false)
   const gesture = useRef<{ release: () => void; cancel: () => void } | null>(null)
@@ -33,24 +35,29 @@ export function usePuzzle() {
     document.addEventListener('visibilitychange', visibility)
     return () => {
       cancelAnimationFrame(animationFrame.current)
+      if (reverseTimer.current !== null) clearTimeout(reverseTimer.current)
       window.removeEventListener('blur', abort)
       document.removeEventListener('visibilitychange', visibility)
     }
   }, [])
 
   function beginPress(move: Move) {
+    if (canPlay && !canPlay(move, tokenState.current)) return false
     if (locked.current || !svgRef.current) return false
     locked.current = true
     setActive(move)
+    const initialCounterclockwise = counterclockwise
     setMessage(`Release to finish turning ${move.cells.join(' + ')}.`)
     const snapshot = tokenState.current
     const tracks = snapshot.flatMap(token => {
       const index = move.cycle.indexOf(token.position)
       if (index < 0) return []
       const nodes = Array.from(svgRef.current!.querySelectorAll<SVGElement>(`[data-token="${token.id}"]`))
-      return [{ route: perimeterRoute(move, token.position, move.cycle[(index + 1) % move.cycle.length]), nodes }]
+      const previous = move.cycle[(index + move.cycle.length - 1) % move.cycle.length]
+      return [{ route: perimeterRoute(move, token.position, move.cycle[(index + 1) % move.cycle.length]), reverseRoute: perimeterRoute(move, previous, token.position).reverse(), nodes }]
     })
-    const timing = createRotationTiming(performance.now(), 320 / speed)
+    const start = performance.now()
+    const timing = createRotationTiming(start, 320 / speed, allowReverse)
     let released = false
     let waiting = false
     let previous = 0
@@ -62,15 +69,16 @@ export function usePuzzle() {
       }
     }
     function tick(now: number) {
-      const { progress, done, holding } = timing.sample(now)
-      for (const track of tracks) paint(track.nodes, pointAlongRoute(track.route, progress))
-      if (progress > 0 && !done && previous) intervals.push(now - previous)
+      const { progress: relativeProgress, done, holding } = timing.sample(now)
+      const progress = relativeProgress * (initialCounterclockwise ? -1 : 1)
+      for (const track of tracks) paint(track.nodes, pointAlongRoute(progress < 0 ? track.reverseRoute : track.route, Math.abs(progress)))
+      if (progress !== 0 && !done && previous) intervals.push(now - previous)
       previous = now
       if (holding && !released) { waiting = true; previous = 0 }
       else if (!done) animationFrame.current = requestAnimationFrame(tick)
       else {
         gesture.current = null
-        const next = rotate(snapshot, move.cycle)
+        const next = rotate(snapshot, progress < 0 ? [...move.cycle].reverse() : move.cycle)
         pendingFinish.current = true
         setTokens(next)
         setMoveCount(count => count + 1)
@@ -83,12 +91,17 @@ export function usePuzzle() {
       release() {
         if (released) return
         released = true
-        timing.release(performance.now())
-        setMessage(`Turning ${move.cells.join(' + ')} clockwise…`)
+        if (reverseTimer.current !== null) clearTimeout(reverseTimer.current)
+        const now = performance.now()
+        const nextCounterclockwise = initialCounterclockwise !== (allowReverse && now - start >= REVERSE_HOLD_MS)
+        setCounterclockwise(nextCounterclockwise)
+        timing.release(now)
+        setMessage(`Turning ${move.cells.join(' + ')} ${nextCounterclockwise ? 'counterclockwise' : 'clockwise'}…`)
         if (waiting) { waiting = false; animationFrame.current = requestAnimationFrame(tick) }
       },
       cancel() {
         if (released) return
+        if (reverseTimer.current !== null) clearTimeout(reverseTimer.current)
         cancelAnimationFrame(animationFrame.current)
         for (const track of tracks) paint(track.nodes, track.route[0])
         gesture.current = null
@@ -97,6 +110,11 @@ export function usePuzzle() {
         setMessage('Turn cancelled. Pick any tile to try again.')
       },
     }
+    if (allowReverse) reverseTimer.current = setTimeout(() => {
+      setCounterclockwise(!initialCounterclockwise)
+      setMessage(`Release to turn ${initialCounterclockwise ? 'clockwise' : 'counterclockwise'}.`)
+      if (waiting) { waiting = false; animationFrame.current = requestAnimationFrame(tick) }
+    }, REVERSE_HOLD_MS)
     animationFrame.current = requestAnimationFrame(tick)
     return true
   }
@@ -109,10 +127,17 @@ export function usePuzzle() {
 
   function reset() {
     if (locked.current) return
-    setTokens(createTokens())
+    setTokens(initialTokens())
     setMoveCount(0)
     setFrameTime(null)
     setMessage('A fresh start. There’s no wrong first move.')
+  }
+  function startLevel(nextTokens: Token[]) {
+    if (locked.current) return
+    setTokens(nextTokens)
+    setMoveCount(0)
+    setFrameTime(null)
+    setMessage('Make every row a single color.')
   }
   function mix(availableMoves?: Move[]) {
     if (locked.current) return
@@ -122,7 +147,7 @@ export function usePuzzle() {
     setMessage('All mixed up. Make a little movement.')
   }
 
-  return { tokens, active, moveCount, speed, setSpeed, debug, setDebug, message, frameTime, svgRef, locked, play, beginPress, releasePress, cancelPress, reset, mix }
+  return { tokens, active, counterclockwise, moveCount, speed, setSpeed, debug, setDebug, message, frameTime, svgRef, locked, play, beginPress, releasePress, cancelPress, reset, mix, startLevel }
 }
 
 export type Puzzle = ReturnType<typeof usePuzzle>

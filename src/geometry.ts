@@ -87,7 +87,8 @@ export function maskPositionsForSurface(surface: Move, possibleMoves: Move[]): S
   for (const move of possibleMoves) {
     move.cycle.forEach((source, index) => {
       const route = perimeterRoute(move, source, move.cycle[(index + 1) % move.cycle.length])
-      if (route.some(point => intersectsSurface(point, surface.cells))) relevant.add(source)
+      const reverseRoute = perimeterRoute(move, move.cycle[(index + move.cycle.length - 1) % move.cycle.length], source)
+      if ([...route, ...reverseRoute].some(point => intersectsSurface(point, surface.cells))) relevant.add(source)
     })
   }
   return relevant

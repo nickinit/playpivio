@@ -89,6 +89,15 @@ export function rotate(tokens: Token[], cycle: PositionId[]): Token[] {
   return tokens.map(token => ({ ...token, position: destinations.get(token.position) ?? token.position }))
 }
 
+export function completedRows(tokens: Token[]): number[] {
+  const colors = new Map(tokens.map(token => [token.position, token.color]))
+  return Array.from({ length: ROWS }, (_, row) => row).filter(row => {
+    const first = row * COLUMNS + 1
+    const color = colors.get(first)
+    return color !== undefined && Array.from({ length: COLUMNS }, (_, column) => colors.get(first + column)).every(candidate => candidate === color)
+  })
+}
+
 export function interpolate(from: Point, to: Point, progress: number): Point {
   return { x: from.x + (to.x - from.x) * progress, y: from.y + (to.y - from.y) * progress }
 }

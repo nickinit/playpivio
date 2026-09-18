@@ -1,5 +1,9 @@
 # Pivio
 
+## Current playable levels
+
+The home screen offers mandatory tutorial Level 0 plus ten main levels. The approved layouts live in `src/levels.ts`; the former Level 10 layout is now Level 6. Tutorial completion is saved locally in this browser. Every main-level entry resets its counter and generates a new board through legal moves from five solid-color rows, so even Level 8's immovable interior dot starts in a solvable configuration. Scramble lengths increase from 4 to 24 moves; these are tuning parameters, not measured minimum solution lengths or a proven difficulty ranking. Earlier layout descriptions below are historical.
+
 Current board restored to 4×5: 20 dots, five colors with four tokens each, and seven clickable shapes (A, BC, DEF, G, HIL, J, K). The larger experimental layout is no longer active. Press/release timing and tactile styling are unchanged.
 
 Latest layout: 19 clickable surfaces, including new 12-, 11-, 8-, 6-, 5- and 3-cell unions alongside the existing BC, DEF and HIL groups. Every union is edge-connected and hole-free, with one clockwise outer perimeter. All 63 cells are covered exactly once; 80 dots and ten balanced colors remain unchanged. Dots fully inside a union stay stationary when that union rotates.

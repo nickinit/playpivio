@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { BOARD_WIDTH, BOARD_HEIGHT, TOKEN_COUNT, ORIGIN, cells, moves, positions } from './model'
+import { BOARD_WIDTH, BOARD_HEIGHT, ORIGIN, COLUMNS, STEP, completedRows, cells, moves, positions } from './model'
 import type { Color, Move } from './model'
 import { CUTOUT_RADIUS, DOT_RADIUS, maskPositionsForSurface, tilePath, vertexSurfaces } from './geometry'
 import type { Puzzle } from './usePuzzle'
@@ -27,7 +27,7 @@ export const BALL_FINISHES = [
   { tilt: -2, x: .2, y: .8, strength: 1 },
 ]
 
-export default function TileBoard({ puzzle, availableMoves = moves }: { puzzle: Puzzle; availableMoves?: Move[] }) {
+export default function TileBoard({ puzzle, availableMoves = moves, boardHeight = BOARD_HEIGHT, enabledMoveIds, tutorialTileId }: { puzzle: Puzzle; availableMoves?: Move[]; boardHeight?: number; enabledMoveIds?: string[]; tutorialTileId?: string }) {
   const surfaces = useMemo(() => buildSurfaces(availableMoves), [availableMoves])
   const touches = useMemo(() => vertexSurfaces(availableMoves), [availableMoves])
   const { tokens, active, debug, svgRef, play, beginPress, releasePress, cancelPress, locked } = puzzle
@@ -41,11 +41,11 @@ export default function TileBoard({ puzzle, availableMoves = moves }: { puzzle: 
   }
 
   return <>
-    <svg ref={svgRef} className={`puzzle-board ${active ? 'is-moving' : ''}`} viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`} role="group" aria-label={`Pivio puzzle: ${TOKEN_COUNT} shared dots and ${surfaces.length} rotatable tiles`}>
+    <svg ref={svgRef} className={`puzzle-board ${active ? 'is-moving' : ''}`} viewBox={`0 0 ${BOARD_WIDTH} ${boardHeight}`} role="group" aria-label={`Pivio puzzle: ${tokens.length} shared dots and ${surfaces.length} rotatable tiles`}>
       <title>Pivio tactile puzzle board</title>
       <desc>Choose a cream tile to move its perimeter dots clockwise. Tab between tiles and press Enter or Space to rotate.</desc>
       <defs>
-        <linearGradient id="tile-ivory" gradientUnits="userSpaceOnUse" x1={ORIGIN} y1={ORIGIN} x2={BOARD_WIDTH - ORIGIN} y2={BOARD_HEIGHT - ORIGIN}>
+        <linearGradient id="tile-ivory" gradientUnits="userSpaceOnUse" x1={ORIGIN} y1={ORIGIN} x2={BOARD_WIDTH - ORIGIN} y2={boardHeight - ORIGIN}>
           <stop stopColor="#f8f4ec" /><stop offset="0.48" stopColor="#f5f0e6" /><stop offset="1" stopColor="#f1ece2" />
         </linearGradient>
         <radialGradient id="dot-gloss">
@@ -102,8 +102,8 @@ export default function TileBoard({ puzzle, availableMoves = moves }: { puzzle: 
           <stop stopColor="#615344" stopOpacity=".28" /><stop offset=".55" stopColor="#615344" stopOpacity=".18" /><stop offset="1" stopColor="#615344" stopOpacity="0" />
         </radialGradient>
         <filter id="ground-softness" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" /></filter>
-        <mask id="background-only" maskUnits="userSpaceOnUse" x="0" y="0" width={BOARD_WIDTH} height={BOARD_HEIGHT} style={{ maskType: 'luminance' }}>
-          <rect width={BOARD_WIDTH} height={BOARD_HEIGHT} fill="white" />
+        <mask id="background-only" maskUnits="userSpaceOnUse" x="0" y="0" width={BOARD_WIDTH} height={boardHeight} style={{ maskType: 'luminance' }}>
+          <rect width={BOARD_WIDTH} height={boardHeight} fill="white" />
           {surfaces.map(surface => <g key={surface.id} className={materialClass(surface)}>
             <path className="surface-face" d={surface.path} fill="black" stroke="black" strokeWidth="1" fillRule="evenodd" />
           </g>)}
@@ -119,13 +119,14 @@ export default function TileBoard({ puzzle, availableMoves = moves }: { puzzle: 
       </g>
       <g className="surfaces">
         {surfaces.map(surface => {
+          const enabled = !enabledMoveIds || enabledMoveIds.includes(surface.id)
           const isActive = active?.id === surface.id
           const state = isActive ? 'active' : neighbors.has(surface.id) ? 'passive' : 'idle'
-          return <g key={surface.id} role="button" tabIndex={0} aria-label={`Rotate ${surface.cells.join(' + ')} clockwise`} aria-disabled={!!active}
-            data-move={surface.id} data-state={state} className={materialClass(surface)}
+          return <g key={surface.id} role="button" tabIndex={enabled ? 0 : -1} aria-label={`Rotate ${surface.cells.join(' + ')} clockwise`} aria-disabled={!enabled || !!active}
+            data-move={surface.id} data-state={state} className={`${materialClass(surface)} ${enabled ? '' : 'tile-disabled'}`}
             onPointerEnter={() => hover(surface)} onPointerLeave={() => hover(null)}
             onPointerDown={event => {
-              if (event.button !== 0 || !event.isPrimary || locked.current) return
+              if (!enabled || event.button !== 0 || !event.isPrimary || locked.current) return
               event.preventDefault()
               if (beginPress(surface)) {
                 inputOwner.current = event.pointerId
@@ -147,13 +148,13 @@ export default function TileBoard({ puzzle, availableMoves = moves }: { puzzle: 
               inputOwner.current = null
               cancelPress()
             }}
-            onClick={event => { if (event.detail === 0) play(surface) }} onFocus={() => hover(surface)}
+            onClick={event => { if (enabled && event.detail === 0) play(surface) }} onFocus={() => hover(surface)}
             onBlur={() => { inputOwner.current = null; cancelPress(); hover(null) }}
             onKeyDown={event => {
               if (event.key === 'Escape') { inputOwner.current = null; cancelPress() }
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
-                if (!event.repeat && beginPress(surface)) inputOwner.current = event.key
+                if (enabled && !event.repeat && beginPress(surface)) inputOwner.current = event.key
               }
             }}
             onKeyUp={event => {
@@ -169,7 +170,10 @@ export default function TileBoard({ puzzle, availableMoves = moves }: { puzzle: 
               </g></g></g>
             </g>
             <path d={surface.path} fill="transparent" className="hit-area" fillRule="evenodd" />
-            <g className="surface-face" pointerEvents="none"><circle className="center-dimple" cx={surface.center.x} cy={surface.center.y} r={DIMPLE_RADIUS} fill="url(#dimple-material)" filter="url(#dimple-inset)" /></g>
+            {(!tutorialTileId || surface.id === tutorialTileId) && <g className="surface-face" pointerEvents="none">
+              <circle className="center-dimple" cx={surface.center.x} cy={surface.center.y} r={DIMPLE_RADIUS} fill="url(#dimple-material)" filter="url(#dimple-inset)" />
+              {surface.id === tutorialTileId && enabled && !active && <circle className="tutorial-pulse" cx={surface.center.x} cy={surface.center.y} r="10" aria-hidden="true" />}
+            </g>}
             {debug && <path d={surface.path} className={`debug-surface ${state}`} pointerEvents="none" />}
           </g>
         })}
@@ -200,9 +204,17 @@ export default function TileBoard({ puzzle, availableMoves = moves }: { puzzle: 
         </g>})}
       </g>
       {debug && <g className="position-labels" pointerEvents="none">{Object.entries(positions).map(([position, point]) => <text key={position} x={point.x} y={point.y - DOT_RADIUS - 9} textAnchor="middle">{position}</text>)}</g>}
+      <g className="row-checks" pointerEvents="none">
+        {completedRows(tokens).filter(row => !active?.cycle.some(position => Math.floor((position - 1) / COLUMNS) === row)).map(row =>
+          <g key={row} data-complete-row={row + 1} transform={`translate(${BOARD_WIDTH - 10} ${ORIGIN + row * STEP})`} role="img" aria-label={`Row ${row + 1}: all colors match`}>
+            <circle r="8" fill="#e1ebd8" />
+            <path d="M-4 0 L-1 3 L4 -3" fill="none" stroke="#5f8050" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </g>,
+        )}
+      </g>
     </svg>
     {debug && <div className="debug-panel">
-      <div><strong>{selected ? selected.cells.join(' + ') : 'Geometry inspector'}</strong><span>{TOKEN_COUNT} tokens · {surfaces.length} surfaces</span></div>
+      <div><strong>{selected ? selected.cells.join(' + ') : 'Geometry inspector'}</strong><span>{tokens.length} tokens · {surfaces.length} surfaces</span></div>
       <p>{selected ? [...selected.cycle, selected.cycle[0]].join(' → ') : 'Hover or focus a tile to inspect its cycle.'}</p>
       <div className="debug-key"><span>● Active press</span><span>● Passive deformation</span><span>{puzzle.frameTime ? `${puzzle.frameTime.toFixed(1)} ms / frame · last move` : 'Timing appears after a move'}</span></div>
     </div>}

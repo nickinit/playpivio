@@ -24,7 +24,7 @@ test('level 1 renders twelve separate squares and twenty shared dots', () => {
   }
 })
 
-test('level 10 retains its combined shapes', () => {
+test('legacy layout retained as level 6 has its combined shapes', () => {
   assert.equal(moves.length, 7)
   assert.deepEqual(moves.filter(move => move.cells.length > 1).map(move => move.id), ['BC', 'DEF', 'HIL'])
 })
