@@ -42,7 +42,7 @@ test('compact board exposes seven tiles including BC, DEF and HIL', () => {
 test('single and combined surfaces use the same flat masked material', () => {
   const markup = renderToStaticMarkup(createElement(TestBoard))
   assert.equal((markup.match(/class="center-dimple"/g) ?? []).length, moves.length)
-  assert.equal((markup.match(/class="surface-face" d="[^"]+" fill="#F2F1EB"/g) ?? []).length, moves.length)
+  assert.equal((markup.match(/class="surface-face" d="[^"]+" fill="#E7E5DE"/g) ?? []).length, moves.length)
   assert.ok(markup.includes(`viewBox="0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}"`))
   for (const move of moves) assert.ok(markup.includes(`mask="url(#cutouts-${move.id})"`))
 })
