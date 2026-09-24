@@ -51,9 +51,9 @@ export default function App() {
           {solvedTutorial ? <>Well done! Both rows match.<span>You’re ready to play.</span></> : <>Press the left tile to move its dots clockwise.<span>Release to finish.</span></>}
         </h1>
       </section> : <section className="introduction" aria-labelledby="page-title">
-        <p className="eyebrow">A LITTLE LOGIC. A LITTLE MAGIC.</p>
-        <h1 id="page-title" ref={headingRef} tabIndex={-1}>Good things come around.</h1>
-        <p className="subtitle">{started ? 'Press to turn. Hold to switch direction. Release to finish.' : 'A little movement. A new perspective. Choose your level.'}</p>
+        <p className="eyebrow">PIVIO · COLOR PUZZLE</p>
+        <h1 id="page-title" ref={headingRef} tabIndex={-1}>{started ? 'Make every row one color.' : 'Choose your level.'}</h1>
+        <p className="subtitle">{started ? 'Press to turn. Hold to switch direction. Release to finish.' : 'Start with the basics. Find your next challenge.'}</p>
       </section>}
       {started ? <section className="playground" aria-label={`Level ${level} puzzle`}>
         {level !== 0 && <div className="board-meta"><span><i /> Level {level}</span><span className="direction-indicator" role="status" aria-live="polite" aria-label={`Rotation: ${puzzle.counterclockwise ? 'counterclockwise' : 'clockwise'}`} title={`${puzzle.counterclockwise ? 'Counterclockwise' : 'Clockwise'} · Hold a tile to switch`}><span aria-hidden="true">{puzzle.counterclockwise ? '↺' : '↻'}</span></span><span className="move-count">Moves: <strong>{String(puzzle.moveCount).padStart(2, '0')}</strong></span></div>}

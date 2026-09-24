@@ -2,10 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import TileBoard from '../src/TileBoard.tsx'
+import TileBoard, { BALL_COLORS } from '../src/TileBoard.tsx'
 import { usePuzzle } from '../src/usePuzzle.ts'
 import { CUTOUT_RADIUS, DOT_RADIUS, TILE_CORNER_RADIUS, TILE_GAP, maskPositionsForSurface } from '../src/geometry.ts'
-import { COLORS, BOARD_WIDTH, BOARD_HEIGHT, ORIGIN, STEP, moves } from '../src/model.ts'
+import { COLORS, BOARD_WIDTH, BOARD_HEIGHT, STEP, moves } from '../src/model.ts'
 
 function TestBoard() {
   return createElement(TileBoard, { puzzle: usePuzzle() })
@@ -39,70 +39,38 @@ test('compact board exposes seven tiles including BC, DEF and HIL', () => {
   assert.ok(!markup.includes('debug-panel'))
 })
 
-test('all single and combined surfaces share dimples and material filters', () => {
+test('single and combined surfaces use the same flat masked material', () => {
   const markup = renderToStaticMarkup(createElement(TestBoard))
-  assert.equal((markup.match(/class="center-dimple"/g) ?? []).length, 7)
-  assert.equal((markup.match(/filter="url\(#surface-bevel\)"/g) ?? []).length, 7)
-  assert.ok(!markup.includes('<image'))
-  assert.ok(!markup.includes('<canvas'))
+  assert.equal((markup.match(/class="center-dimple"/g) ?? []).length, moves.length)
+  assert.equal((markup.match(/class="surface-face" d="[^"]+" fill="#F2F1EB"/g) ?? []).length, moves.length)
+  assert.ok(markup.includes(`viewBox="0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}"`))
+  for (const move of moves) assert.ok(markup.includes(`mask="url(#cutouts-${move.id})"`))
 })
 
-test('tiles do not restore the old offset body and individual cast-shadow layers', () => {
-  const markup = renderToStaticMarkup(createElement(TestBoard))
-  for (const removed of ['tile-underlay', 'surface-shadow', 'surface-body', 'tile-body']) assert.ok(!markup.includes(removed))
-  assert.equal((markup.match(/role="button"/g) ?? []).length, 7)
-})
-
-test('tile material lighting uses shared board coordinates rather than each shape bounds', () => {
-  const markup = renderToStaticMarkup(createElement(TestBoard))
-  for (const material of ['tile-ivory']) {
-    assert.ok(markup.includes(`<linearGradient id="${material}" gradientUnits="userSpaceOnUse" x1="${ORIGIN}" y1="${ORIGIN}" x2="${BOARD_WIDTH - ORIGIN}" y2="${BOARD_HEIGHT - ORIGIN}">`))
-    assert.equal((markup.match(new RegExp(`fill="url\\(#${material}\\)"`, 'g')) ?? []).length, 7)
-  }
-})
-
-test('reference proportions change rendered dimensions without changing grid spacing', () => {
+test('restyling preserves board proportions and touching cutouts', () => {
   assert.equal(STEP, 104)
-  assert.ok(DOT_RADIUS * 2 / STEP > .45 && DOT_RADIUS * 2 / STEP < .5)
+  assert.equal(DOT_RADIUS, 24.5)
   assert.equal(CUTOUT_RADIUS, DOT_RADIUS)
   assert.equal(TILE_GAP, 3)
   assert.equal(TILE_CORNER_RADIUS, 12)
 })
 
-test('dots retain their material shading without projecting shadows onto tiles', () => {
+test('each animated dot is exactly one flat solid circle in the requested palette', () => {
   const markup = renderToStaticMarkup(createElement(TestBoard))
-  const dots = [...markup.matchAll(/<g[^>]*data-dot="true"[^>]*>(.*?)<\/g>/g)]
+  const dots = [...markup.matchAll(/<g[^>]*data-dot="true"[^>]*data-color="([^"]+)"[^>]*>(.*?)<\/g>/g)]
   assert.equal(dots.length, 20)
+  assert.deepEqual(BALL_COLORS, {
+    coral: '#EB6B67', blue: '#438EDB', yellow: '#F2BC4B', mint: '#55B98A', lavender: '#8C68D8',
+  })
   for (const dot of dots) {
-    assert.ok(dot[1].includes('url(#color-'))
-    assert.ok(dot[1].includes('url(#dot-gloss)'))
-    assert.ok(!dot[1].includes('filter='))
+    assert.equal(dot[2], `<circle r="${DOT_RADIUS}" fill="${BALL_COLORS[dot[1] as keyof typeof BALL_COLORS]}"></circle>`)
   }
-  for (const removed of ['dot-shadow', 'dot-ambient-shadow', 'dot-cast-shadow', 'moving-contact-field', 'indentation-shadows']) assert.ok(!markup.includes(removed))
 })
 
-test('resin finishes are asymmetric, clipped to each ball, deterministic and filter-free', () => {
+test('renderer has no gradients, lighting filters, reflections or grounding layers', () => {
   const markup = renderToStaticMarkup(createElement(TestBoard))
-  assert.equal((markup.match(/class="resin-finish" clip-path="url\(#ball-material-clip\)"/g) ?? []).length, 20)
-  for (const finish of ['resin-sheen', 'resin-warmth', 'resin-tone']) {
-    assert.equal((markup.match(new RegExp(`fill="url\\(#${finish}\\)"`, 'g')) ?? []).length, 20)
+  for (const removed of ['Gradient', '<filter', 'filter=', 'resin-', 'background-grounding', 'surface-bevel', '<ellipse', '<image', '<canvas']) {
+    assert.ok(!markup.includes(removed), removed)
   }
-  assert.ok(markup.includes('rotate(-8)'))
-  assert.ok(markup.includes('rotate(5)'))
   assert.equal(markup, renderToStaticMarkup(createElement(TestBoard)))
-})
-
-test('reference grounding stays behind tiles and follows the twenty moving tokens', () => {
-  const markup = renderToStaticMarkup(createElement(TestBoard))
-  const groundingStart = markup.indexOf('<g class="background-grounding"')
-  const facesStart = markup.indexOf('<g class="surfaces">')
-  assert.ok(groundingStart > 0 && groundingStart < facesStart)
-  const grounding = markup.slice(groundingStart, facesStart)
-  assert.ok(grounding.includes('mask="url(#background-only)"'))
-  assert.equal((grounding.match(/data-token=/g) ?? []).length, 20)
-  const exclusion = markup.match(/<mask id="background-only"[^>]*>(.*?)<\/mask>/)![1]
-  assert.equal((exclusion.match(/<path /g) ?? []).length, 7)
-  assert.equal((exclusion.match(/fill="black"/g) ?? []).length, 7)
-  assert.ok(!markup.includes('M-22 -3 C-25'))
-  assert.ok(!markup.includes('candy-lip'))
 })
