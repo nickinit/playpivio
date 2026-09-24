@@ -51,7 +51,7 @@ export default function App() {
           {solvedTutorial ? <>Well done! Both rows match.<span>You’re ready to play.</span></> : <>Press the left tile to move its dots clockwise.<span>Release to finish.</span></>}
         </h1>
       </section> : <section className="introduction" aria-labelledby="page-title">
-        <p className="eyebrow">PIVIO · COLOR PUZZLE</p>
+        {!started && <p className="eyebrow">PIVIO · COLOR PUZZLE</p>}
         <h1 id="page-title" ref={headingRef} tabIndex={-1}>{started ? 'Make every row one color.' : 'Choose your level.'}</h1>
         <p className="subtitle">{started ? 'Press to turn. Hold to switch direction. Release to finish.' : 'Start with the basics. Find your next challenge.'}</p>
       </section>}
@@ -74,6 +74,6 @@ export default function App() {
         </button>)}
       </section>}
     </main>
-    {level !== 0 && <footer className="site-footer"><span className="color-signature" aria-hidden="true"><i /><i /><i /><i /><i /></span><p>No timer. No pressure. Just a little movement.</p><span className="version">PIVIO · INTERACTION STUDY 01</span></footer>}
+    {level !== 0 && <footer className="site-footer"><span className="color-signature" aria-hidden="true"><i /><i /><i /><i /><i /></span>{!started && <><p>No timer. No pressure. Just a little movement.</p><span className="version">PIVIO · INTERACTION STUDY 01</span></>}</footer>}
   </div>
 }
