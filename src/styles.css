@@ -74,9 +74,9 @@ h1 { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fon
 .tile { cursor: pointer; outline: none; }
 .hit-area { stroke: transparent; stroke-width: 2px; }
 .tile path.surface-face { transition: fill 120ms ease; }
-.tile.hovered path.surface-face, .tile:focus-visible path.surface-face { fill: #C9C6BA; }
-.tile.pressed path.surface-face { fill: #BCBFB2; }
-.tile.tile-disabled path.surface-face { fill: #D6D3C9; }
+.tile.hovered path.surface-face, .tile:focus-visible path.surface-face { fill: #ADA99B; }
+.tile.pressed path.surface-face { fill: #9FA393; }
+.tile.tile-disabled path.surface-face { fill: #BCB8AB; }
 .center-dimple { opacity: .84; }
 .tutorial-pulse { fill: none; stroke: #29332B; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: tutorial-pulse 1.6s ease-out infinite; }
 @keyframes tutorial-pulse {

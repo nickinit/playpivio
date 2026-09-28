@@ -94,7 +94,7 @@ export default function TileBoard({ puzzle, availableMoves = moves, boardHeight 
             }}>
             <g pointerEvents="none">
               <g mask={`url(#cutouts-${surface.id})`}>
-                <path className="surface-face" d={surface.path} fill="#D6D3C9" fillRule="evenodd" />
+                <path className="surface-face" d={surface.path} fill="#BCB8AB" fillRule="evenodd" />
               </g>
             </g>
             <path d={surface.path} fill="transparent" className="hit-area" fillRule="evenodd" />
