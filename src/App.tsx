@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import TileBoard from './TileBoard'
 import { usePuzzle } from './usePuzzle'
-import { ORIGIN, STEP } from './model'
+import { ORIGIN, STEP, ROWS, completedRows } from './model'
+import Completion from './Completion'
 import { canPlayTutorial, createTutorialTokens, readTutorialCompletion, tutorialMoves, tutorialSolved, TUTORIAL_KEY } from './tutorial'
 import './styles.css'
 
@@ -24,6 +25,13 @@ export default function App() {
   const started = level !== null
   const puzzle = level === 0 ? tutorialPuzzle : mainPuzzle
   const selectedLevel = levels.find(candidate => candidate.id === level)
+  const solvedLevel = level !== null && level !== 0 && !puzzle.active && puzzle.moveCount > 0 && completedRows(puzzle.tokens).length === ROWS
+  const [showCompletion, setShowCompletion] = useState(false)
+  useEffect(() => {
+    if (!solvedLevel) { setShowCompletion(false); return }
+    const timer = window.setTimeout(() => setShowCompletion(true), 450)
+    return () => window.clearTimeout(timer)
+  }, [solvedLevel, level])
   const headingRef = useRef<HTMLHeadingElement>(null)
   const levelButtons = useRef<Partial<Record<Level, HTMLButtonElement | null>>>({})
   const lastLevel = useRef<Level>(0)
@@ -57,7 +65,7 @@ export default function App() {
       </section>}
       {started ? <section className="playground" aria-label={`Level ${level} puzzle`}>
         {level !== 0 && <div className="board-meta"><span><i /> Level {level}</span><span className="direction-indicator" role="status" aria-live="polite" aria-label={`Rotation: ${puzzle.counterclockwise ? 'counterclockwise' : 'clockwise'}`} title={`${puzzle.counterclockwise ? 'Counterclockwise' : 'Clockwise'} · Hold a tile to switch`}><span aria-hidden="true">{puzzle.counterclockwise ? '↺' : '↻'}</span></span><span className="move-count">Moves: <strong>{String(puzzle.moveCount).padStart(2, '0')}</strong></span></div>}
-        <div className="board-stage"><TileBoard key={level} puzzle={puzzle} availableMoves={level === 0 ? tutorialMoves : selectedLevel!.moves} boardHeight={level === 0 ? ORIGIN * 2 + STEP : undefined} enabledMoveIds={level === 0 ? solvedTutorial ? [] : ['A'] : undefined} tutorialTileId={level === 0 ? 'A' : undefined} /></div>
+        <div className="board-stage"><TileBoard key={level} puzzle={puzzle} availableMoves={level === 0 ? tutorialMoves : selectedLevel!.moves} boardHeight={level === 0 ? ORIGIN * 2 + STEP : undefined} enabledMoveIds={level === 0 ? solvedTutorial ? [] : ['A'] : solvedLevel ? [] : undefined} tutorialTileId={level === 0 ? 'A' : undefined} /></div>
         {level === 0 && !solvedTutorial && <p className="tutorial-hint">Only the left tile is active. Press tiles, not dots.</p>}
         {level === 0 && solvedTutorial && <button className="tutorial-continue" onClick={() => { returningHome.current = true; setLevel(null) }}>Choose a level →</button>}
       </section> : <section className="level-selection" aria-label="Choose a level">
@@ -74,6 +82,7 @@ export default function App() {
         </button>)}
       </section>}
     </main>
+    {solvedLevel && showCompletion && <Completion level={level!} moves={puzzle.moveCount} onContinue={() => { setShowCompletion(false); returningHome.current = true; setLevel(null) }} />}
     {level !== 0 && <footer className="site-footer"><span className="color-signature" aria-hidden="true"><i /><i /><i /><i /><i /></span>{!started && <><p>No timer. No pressure. Just a little movement.</p><span className="version">PIVIO · INTERACTION STUDY 01</span></>}</footer>}
   </div>
 }
