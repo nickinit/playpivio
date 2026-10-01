@@ -7,14 +7,33 @@ import { createLevelStart, createSolvedTokens, levels } from '../src/levels.ts'
 import TileBoard from '../src/TileBoard.tsx'
 import { usePuzzle } from '../src/usePuzzle.ts'
 
-test('ten approved layouts cover every cell once with valid single perimeters', () => {
+test('twenty layouts cover every cell once with valid single perimeters', () => {
   const expected = [[], ['AB'], ['AB', 'EF'], ['AD', 'EF', 'KL'], ['AB', 'DE', 'HI', 'JK'], ['BC', 'DEF', 'HIL'], ['ADG', 'BEH', 'CFI', 'JKL'], ['ABE', 'CF', 'DGJ', 'HIKL'], ['ADEH', 'BCFI', 'GJKL'], ['ADEHI', 'BCF', 'GJKL']]
-  assert.deepEqual(levels.map(level => level.id), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+  assert.deepEqual(levels.map(level => level.id), Array.from({ length: 20 }, (_, index) => index + 1))
   for (const level of levels) {
-    assert.deepEqual(level.moves.filter(move => move.cells.length > 1).map(move => move.id).sort(), [...expected[level.id - 1]].sort())
+    if (level.id <= 10) assert.deepEqual(level.moves.filter(move => move.cells.length > 1).map(move => move.id).sort(), [...expected[level.id - 1]].sort())
     assert.deepEqual(level.moves.flatMap(move => move.cells).sort(), Object.keys(cells).sort())
     for (const move of level.moves) assert.deepEqual(boundaryLoops(move.cells), [move.cycle])
   }
+})
+
+test('fixed starts repeat across openings, remain unsolved and have a legal solution', () => {
+  const arrangements = new Set<string>()
+  const layouts = new Set<string>()
+  for (const level of levels) {
+    const first = createLevelStart(level)
+    first.tokens[0].position = 99
+    const start = createLevelStart(level)
+    assert.deepEqual(start, createLevelStart(level))
+    assert.ok(completedRows(start.tokens).length < 5)
+    arrangements.add([...start.tokens].sort((left, right) => left.position - right.position).map(token => token.color).join(','))
+    layouts.add(level.moves.map(move => move.id).sort().join(','))
+    let restored = start.tokens
+    for (const move of [...start.sequence].reverse()) restored = rotate(restored, [...move.cycle].reverse())
+    assert.deepEqual(restored, createSolvedTokens())
+  }
+  assert.equal(arrangements.size, 20)
+  assert.equal(layouts.size, 20)
 })
 
 test('every level generates unsolved, balanced starts reversible using legal clockwise moves', () => {
@@ -39,7 +58,7 @@ test('every level generates unsolved, balanced starts reversible using legal clo
   }
 })
 
-test('all ten boards render their own surfaces with exactly twenty shared dots', () => {
+test('all twenty boards render their own surfaces with exactly twenty shared dots', () => {
   for (const level of levels) {
     function Board() {
       return createElement(TileBoard, { puzzle: usePuzzle(), availableMoves: level.moves })

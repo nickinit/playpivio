@@ -12,6 +12,16 @@ const layouts = [
   { name: 'Around the corner', groups: ['ABE', 'CF', 'DGJ', 'HIKL'], shuffleMoves: 18 },
   { name: 'Interlocking paths', groups: ['ADEH', 'BCFI', 'GJKL'], shuffleMoves: 20 },
   { name: 'Final weave', groups: ['ADEHI', 'BCF', 'GJKL'], shuffleMoves: 24 },
+  { name: 'Gentle bridge · Easy', groups: ['GH'], shuffleMoves: 6 },
+  { name: 'Two stepping stones · Easy', groups: ['CF', 'KL'], shuffleMoves: 8 },
+  { name: 'Top shelf · Medium', groups: ['ABC', 'GH'], shuffleMoves: 12 },
+  { name: 'Side streets · Medium', groups: ['ADG', 'EH', 'KL'], shuffleMoves: 16 },
+  { name: 'Elbow room · Medium', groups: ['ABE', 'DGH', 'FI', 'JK'], shuffleMoves: 18 },
+  { name: 'Four lanes · Hard', groups: ['ABC', 'DEF', 'GHI', 'JKL'], shuffleMoves: 22 },
+  { name: 'Cornerstone · Hard', groups: ['ABDE', 'CF', 'GJ', 'HK', 'IL'], shuffleMoves: 24 },
+  { name: 'Switchbacks · Hard', groups: ['ABCE', 'DGHJ', 'FIL'], shuffleMoves: 28 },
+  { name: 'Three currents · Expert', groups: ['ABDEG', 'CFIL', 'HJK'], shuffleMoves: 32 },
+  { name: 'Grand junction · Expert', groups: ['ABCF', 'DEGH', 'JKL'], shuffleMoves: 36 },
 ]
 
 export const levels = layouts.map((layout, index) => {
@@ -33,7 +43,15 @@ export function createSolvedTokens(): Token[] {
   }))
 }
 
-export function createLevelStart(level: LevelDefinition, random = Math.random) {
+function levelRandom(levelId: number) {
+  let seed = levelId * 7919 + 781
+  return () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+    return seed / 4294967296
+  }
+}
+
+export function createLevelStart(level: LevelDefinition, random = levelRandom(level.id)) {
   let tokens = createSolvedTokens()
   const sequence: Move[] = []
   for (let index = 0; index < level.shuffleMoves; index++) {
