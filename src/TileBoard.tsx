@@ -10,7 +10,7 @@ function buildSurfaces(availableMoves: Move[]) { return availableMoves.map(move 
   const left = Math.min(...vertices.map(point => point.x))
   const top = Math.min(...vertices.map(point => point.y))
   const bounds = { x: left - 4, y: top - 4, width: Math.max(...vertices.map(point => point.x)) - left + 8, height: Math.max(...vertices.map(point => point.y)) - top + 12 }
-  return { ...move, bounds, path: tilePath(move.cells), maskPositions: maskPositionsForSurface(move, availableMoves), center: { x: centers.reduce((sum, point) => sum + point.x, 0) / centers.length, y: centers.reduce((sum, point) => sum + point.y, 0) / centers.length } }
+  return { ...move, bounds, path: tilePath(move.cells), maskPositions: maskPositionsForSurface(move, availableMoves), centers }
 }) }
 export const BALL_COLORS: Record<Color, string> = {
   coral: '#EB6B67',
@@ -99,8 +99,8 @@ export default function TileBoard({ puzzle, availableMoves = moves, boardHeight 
             </g>
             <path d={surface.path} fill="transparent" className="hit-area" fillRule="evenodd" />
             {(!tutorialTileId || surface.id === tutorialTileId) && <g className="surface-face" pointerEvents="none">
-              <circle className="center-dimple" cx={surface.center.x} cy={surface.center.y} r={DIMPLE_RADIUS} fill="#B8BCB4" />
-              {surface.id === tutorialTileId && enabled && !active && <circle className="tutorial-pulse" cx={surface.center.x} cy={surface.center.y} r="10" aria-hidden="true" />}
+              {surface.centers.map((center, index) => <circle key={surface.cells[index]} className="center-dimple" cx={center.x} cy={center.y} r={DIMPLE_RADIUS} fill="#B8BCB4" />)}
+              {surface.id === tutorialTileId && enabled && !active && <circle className="tutorial-pulse" cx={surface.centers[0].x} cy={surface.centers[0].y} r="10" aria-hidden="true" />}
             </g>}
             {debug && <path d={surface.path} className={`debug-surface ${state}`} pointerEvents="none" />}
           </g>

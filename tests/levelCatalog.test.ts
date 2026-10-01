@@ -65,6 +65,9 @@ test('all twenty boards render their own surfaces with exactly twenty shared dot
     }
     const markup = renderToStaticMarkup(createElement(Board))
     assert.equal((markup.match(/data-dot="true"/g) ?? []).length, 20)
+    const markers = [...markup.matchAll(/class="center-dimple" cx="([^"]+)" cy="([^"]+)"/g)].map(match => [Number(match[1]), Number(match[2])])
+    const expectedCenters = Array.from({ length: 12 }, (_, index) => [100 + index % 3 * 104, 100 + Math.floor(index / 3) * 104])
+    assert.deepEqual(markers.sort((left, right) => left[1] - right[1] || left[0] - right[0]), expectedCenters)
     assert.deepEqual([...markup.matchAll(/data-move="([^"]+)"/g)].map(match => match[1]), level.moves.map(move => move.id))
   }
 })
